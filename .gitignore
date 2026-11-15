@@ -1,0 +1,33 @@
+# Build output
+build/
+build-align/
+obj/
+generated/
+.claude/
+*.o
+*.obj
+*.a
+*.lib
+*.d
+*.out
+*.map
+*.lnkxml
+*.mcelf*
+*.bin
+*.hex
+__pycache__/
+
+# NIST's FIPS 204 vectors: fetched on request by tools/gen_acvp.py and
+# generated from them - see NOTICE. No NIST data is checked in, neither the
+# download nor the arrays generated from it. What is checked in is where to
+# get it, and NIST's notice, quoted in NOTICE as its terms require.
+.acvp-cache/
+test/ml-dsa/acvp/acvp_vectors_*.c
+
+# CCS workspace and imported projects
+.metadata/
+.settings/
+.launches/
+*.ccsproject
+*.cproject
+*.project

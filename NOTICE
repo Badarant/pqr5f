@@ -1,0 +1,211 @@
+pqr5f - post-quantum cryptography for the Arm Cortex-R5F
+Copyright 2026 Liviu Silaghe
+
+PROVENANCE
+This project was produced with Claude Code, Anthropic's agentic coding tool,
+directed and reviewed by the copyright holder named above - the original code,
+the edits to the third party sources, the build system, the board integration,
+the tests and the documentation alike. It is recorded here as a matter of fact;
+the terms below and in LICENSE apply as written. What those edits did and did
+not change is set out in THIRD PARTY SW - MODIFIED, and tools/check_encoding.sh
+checks the instruction encodings against the unmodified originals.
+
+
+ORIGINAL CODE
+Original code of this project is licensed under the Apache License 2.0, see
+LICENSE. This covers the build system, the board integration under boards/,
+the test harness under test/, the verification scripts under tools/, the
+measured results under measurements/, the published pages under docs/, and
+common/pqr5f_arch.i and common/keccakf1600_asm.S, which have no upstream
+counterpart. So do the
+copies of pqr5f_arch.i in crypto_sign/ml-dsa-44/r5f/ and r5fstack/, which sit
+beside the ported assembly because a quoted include resolves against the
+directory of the file issuing it. Each original source file carries an
+SPDX-License-Identifier line saying the same.
+test/ml-dsa/acvp/acvp_vectors_*.c are not covered: they are generated from
+NIST's data and are not checked in, see below.
+
+
+THIRD PARTY SW - MODIFIED
+Unlike a plain redistribution, this project *modifies* third party sources: it
+ports Arm assembly from ARMv7E-M (Cortex-M4) to ARMv7-R
+(Cortex-R5F). Every modified file carries a notice describing the change -
+required by the Apache License 2.0 section 4(b) for the files it covers, and
+done for the CC0 ones regardless. These are all of them, and what was changed
+in each:
+
+  in crypto_sign/ml-dsa-44/r5f/ and crypto_sign/ml-dsa-44/r5fstack/
+
+    ntt.S              the .syntax / .cpu / .thumb directives replaced by
+    smallntt_769.S     include "pqr5f_arch.i"
+    pointwise_mont.S
+
+    vector.S           the same, and a byte-wise variant of the 24-bit sample
+                         load in pqcrystals_dilithium_asm_rej_uniform, under
+                         -DPQR5F_STRICT_ALIGN
+
+    config.h           DILITHIUM_MODE wrapped in ifndef, so the parameter set
+                         can be chosen from the command line
+
+  in common/
+
+    keccakf1600.S      the same architecture selection, and byte-wise variants
+                         of the lane load and store in
+                         __KeccakF1600_StateXORLanes and
+                         __KeccakF1600_StateExtractLanes, under
+                         -DPQR5F_STRICT_ALIGN
+
+pointwise_mont.s and vector.s were additionally renamed to .S so that the C
+preprocessor runs on them. Nothing else about them changed.
+
+Where pqm4’s m4fstack holds a symbolic link into m4f, r5fstack holds a copy of 
+the file the link points to, with identical content.
+
+No other third-party file is modified. The rest of what came from pqm4 - the C
+sources, the headers, and the two macro include files - is byte-identical to
+upstream and carries no change notice, because there is no change to describe.
+So is common/randombytes.h, which is PQClean's file copied as it stands; it is
+here only because mupq/common/randombytes.h is a symbolic link into
+mupq/pqclean/ that a Windows checkout does not materialise, which would leave
+the include path with no such header at all.
+
+That the instruction encodings are unchanged is checked mechanically against
+the unmodified originals by tools/check_encoding.sh.
+
+Sources:
+pqm4 (https://github.com/mupq/pqm4) commit cc2c1b992b602d285bd15991a566d5f17b34c1fa
+
+Included components:
+  - crypto_sign/ml-dsa-44/r5f/     from pqm4 crypto_sign/ml-dsa-44/m4f/
+  - crypto_sign/ml-dsa-44/r5fstack/ from pqm4 crypto_sign/ml-dsa-44/m4fstack/
+      pqm4's README states that each implementation subdirectory carries a
+      LICENSE or COPYING file, and that all other code in the repository is
+      dual-licensed under Apache-2.0 and CC0-1.0. crypto_sign/ml-dsa-44/ has
+      no such file, so the dual licence is what applies, except where a file
+      header says otherwise:
+
+        smallntt.h, smallntt_769.S, macros_smallntt.i
+            Copyright (c) 2023 Junhao Huang (jhhuang_nuaa@126.com), licensed
+            under the Apache License 2.0 alone, not dual. The fused basemul in
+            the r5fstack variant derives from the same author's Improved
+            Plantard Arithmetic code. The copyright and licence headers are
+            kept in every copy here. Of the three, only smallntt_769.S is
+            modified, and it carries a notice of what was changed; smallntt.h
+            and macros_smallntt.i are copied without modification.
+
+        ntt.S
+            Carries "Now licensed under CC0 with permission of the authors".
+  - common/keccakf1600.S           from pqm4 common/keccakf1600.S
+      Keccak, Keyak and Ketje Teams (Bertoni, Daemen, Peeters, Van Assche,
+      Van Keer) with optimisations by Alexandre Adomnicai, CC0-1.0.
+  - common/randombytes.h           PQClean's header, copied unchanged, CC0-1.0.
+      From PQClean through the mupq submodule; see above for why a copy is
+      needed on a Windows checkout.
+
+
+THIRD PARTY TEST DATA - NIST
+The FIPS 204 test vectors come from the National Institute of Standards and
+Technology (NIST). NIST is the source of this data.
+
+None of that data is redistributed here - not the files, not arrays generated
+from them, and not a submodule pointing at them. NIST's repository is treated
+the way the TI SDK is: it lives on your machine, and the build references it.
+tools/gen_acvp.py fetches the three files below on request, after asking, into
+a git-ignored cache, or reads a checkout you already have; it then generates
+test/ml-dsa/acvp/acvp_vectors_{44,65,87}.c, which are git-ignored too.
+
+Two things of NIST's origin are therefore in this repository, deliberately.
+One is the locating information in this section and in tools/gen_acvp.py - the
+repository URL, the commit, the three paths, their digests - which is what the
+requirement to acknowledge NIST as the source amounts to in practice, and from
+which no vector can be reconstructed. The other is NIST's notice itself,
+quoted below because its terms require it to be kept intact.
+
+Source:
+  https://github.com/usnistgov/ACVP-Server
+  commit 975de31eb83d87039ec88934fdc47d8c312b892d (RELEASE/v1.1.0.43)
+  gen-val/json-files/ML-DSA-keyGen-FIPS204/internalProjection.json
+  gen-val/json-files/ML-DSA-sigGen-FIPS204/internalProjection.json
+  README.md (for the notice below)
+
+The fetch is by commit rather than by branch, and each file is checked against
+a sha256 recorded in tools/gen_acvp.py, so a build is generated from the
+content of that one revision and not from whatever a URL serves later.
+
+Changed from the NIST originals, in the generated files: 25 keyGen and 3
+sigGen cases per parameter set are selected and rewritten as C arrays, and the
+expected outputs are reduced to FNV-1a checksums instead of being carried in
+full.
+
+What follows between the two marker lines is NIST's own text, quoted. It was
+written by NIST, not by the author of pqr5f, and it is included because NIST's
+terms require this notice to be kept intact. Only
+the line wrapping was changed to fit this file.
+
+It is the complete License section of the ACVP-Server README at the commit
+named above, which is the whole of that repository's terms, since it carries
+no LICENSE file. tools/gen_acvp.py compares the quote against that README and
+refuses to generate anything if the two have stopped agreeing word for word,
+so moving the pin to a revision whose terms differ stops the build instead of
+going unnoticed.
+
+----- BEGIN TEXT QUOTED FROM NIST (ACVP-Server README, License section) -----
+
+NIST-developed software is provided by NIST as a public service. You may use,
+copy, and distribute copies of the software in any medium, provided that you
+keep intact this entire notice. You may improve, modify, and create derivative
+works of the software or any portion of the software, and you may copy and
+distribute such modifications or works. Modified works should carry a notice
+stating that you changed the software and should note the date and nature of
+any such change. Please explicitly acknowledge the National Institute of
+Standards and Technology as the source of the software.
+
+NIST-developed software is expressly provided "AS IS." NIST MAKES NO WARRANTY
+OF ANY KIND, EXPRESS, IMPLIED, IN FACT, OR ARISING BY OPERATION OF LAW,
+INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTY OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND DATA ACCURACY. NIST
+NEITHER REPRESENTS NOR WARRANTS THAT THE OPERATION OF THE SOFTWARE WILL BE
+UNINTERRUPTED OR ERROR-FREE, OR THAT ANY DEFECTS WILL BE CORRECTED. NIST DOES
+NOT WARRANT OR MAKE ANY REPRESENTATIONS REGARDING THE USE OF THE SOFTWARE OR
+THE RESULTS THEREOF, INCLUDING BUT NOT LIMITED TO THE CORRECTNESS, ACCURACY,
+RELIABILITY, OR USEFULNESS OF THE SOFTWARE.
+
+You are solely responsible for determining the appropriateness of using and
+distributing the software and you assume all risks associated with its use,
+including but not limited to the risks and costs of program errors,
+compliance with applicable laws, damage to or loss of data, programs or
+equipment, and the unavailability or interruption of operation. This software
+is not intended to be used in any situation where a failure could cause risk
+of injury or damage to property. The software developed by NIST employees is
+not subject to copyright protection within the United States.
+
+----- END TEXT QUOTED FROM NIST ---------------------------------------------
+
+THIRD PARTY SW - UNMODIFIED
+Obtained through submodules, under their own licenses, not redistributed here:
+  - mupq (https://github.com/mupq/mupq) - common/fips202.* and, for the
+    pqclean variant only, common/keccakf1600.c; plus hal.h and the platform
+    interface. fips202.c is compiled into every build: the ported assembly
+    supplies the Keccak permutation, not the sponge around it.
+  - PQClean (https://github.com/pqclean/pqclean) through mupq - the clean
+    reference implementations, used as the correctness cross-check in
+    tools/check_pqclean.sh and, built for the same core with
+    VARIANT=pqclean, as the measurement baseline
+
+
+NOT REDISTRIBUTED
+No TI MCU+ SDK code is included or linked. boards/lp-am243x uses a local SDK
+installation for its prebuilt boot loader and its image-signing and flashing
+scripts only; those remain under Texas Instruments' license.
+
+startup.S brings the core up the way that SDK's nortos kernel does, because
+that kernel builds only with TI Arm Clang. It is a reimplementation and not a
+copy: the MPU is programmed by a table-driven loop where the SDK has a C layer
+over named assembly functions, and the data cache is invalidated with the
+architectural set/way sequence where the SDK uses the Cortex-R5's
+single-instruction c15, c5, 0. What does come from TI material is
+configuration data rather than code - the five MPU region values SysConfig
+generates for this board, the UART0 base address and its register offsets, and
+the memory ranges in am243x_r5f.lds.in. Those are facts about the chip, out of
+its technical reference manual. The eight-entry vector table is the shape
+ARMv7-R mandates, in the order the architecture fixes.

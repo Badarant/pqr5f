@@ -1,0 +1,109 @@
+scheme,variant,opt,operation,rom,ram,libc_rom,libc_ram
+ml-dsa-44,r5f,-Os,keygen,17012,0,236,0
+ml-dsa-44,r5f,-Os,sign,24160,0,236,0
+ml-dsa-44,r5f,-Os,verify,17008,0,0,0
+ml-dsa-44,r5f,-Os,all three,26428,0,236,0
+ml-dsa-44,r5f,-O2,keygen,17264,0,236,0
+ml-dsa-44,r5f,-O2,sign,24664,0,236,0
+ml-dsa-44,r5f,-O2,verify,17256,0,0,0
+ml-dsa-44,r5f,-O2,all three,27176,0,236,0
+ml-dsa-44,r5f,-O3,keygen,17980,0,236,0
+ml-dsa-44,r5f,-O3,sign,25380,0,236,0
+ml-dsa-44,r5f,-O3,verify,17768,0,0,0
+ml-dsa-44,r5f,-O3,all three,28148,0,236,0
+ml-dsa-44,r5fstack,-Os,keygen,16500,0,0,0
+ml-dsa-44,r5fstack,-Os,sign,24160,0,0,0
+ml-dsa-44,r5fstack,-Os,verify,17008,0,0,0
+ml-dsa-44,r5fstack,-Os,all three,27196,0,0,0
+ml-dsa-44,r5fstack,-O2,keygen,17008,0,0,0
+ml-dsa-44,r5fstack,-O2,sign,25176,0,0,0
+ml-dsa-44,r5fstack,-O2,verify,17512,0,0,0
+ml-dsa-44,r5fstack,-O2,all three,28968,0,0,0
+ml-dsa-44,r5fstack,-O3,keygen,17724,0,0,0
+ml-dsa-44,r5fstack,-O3,sign,26148,0,0,0
+ml-dsa-44,r5fstack,-O3,verify,18280,0,0,0
+ml-dsa-44,r5fstack,-O3,all three,30452,0,0,0
+ml-dsa-44,pqclean,-Os,keygen,7768,0,236,0
+ml-dsa-44,pqclean,-Os,sign,9372,0,236,0
+ml-dsa-44,pqclean,-Os,verify,8216,0,0,0
+ml-dsa-44,pqclean,-Os,all three,11544,0,236,0
+ml-dsa-44,pqclean,-O2,keygen,8964,0,236,0
+ml-dsa-44,pqclean,-O2,sign,10556,0,236,0
+ml-dsa-44,pqclean,-O2,verify,9400,0,0,0
+ml-dsa-44,pqclean,-O2,all three,12956,0,236,0
+ml-dsa-44,pqclean,-O3,keygen,9688,0,236,0
+ml-dsa-44,pqclean,-O3,sign,11200,0,236,0
+ml-dsa-44,pqclean,-O3,verify,9960,0,0,0
+ml-dsa-44,pqclean,-O3,all three,14096,0,236,0
+ml-dsa-65,r5f,-Os,keygen,16756,0,236,0
+ml-dsa-65,r5f,-Os,sign,23904,0,236,0
+ml-dsa-65,r5f,-Os,verify,16752,0,0,0
+ml-dsa-65,r5f,-Os,all three,25916,0,236,0
+ml-dsa-65,r5f,-O2,keygen,17264,0,236,0
+ml-dsa-65,r5f,-O2,sign,24408,0,236,0
+ml-dsa-65,r5f,-O2,verify,17256,0,0,0
+ml-dsa-65,r5f,-O2,all three,26664,0,236,0
+ml-dsa-65,r5f,-O3,keygen,17724,0,236,0
+ml-dsa-65,r5f,-O3,sign,24868,0,236,0
+ml-dsa-65,r5f,-O3,verify,17768,0,0,0
+ml-dsa-65,r5f,-O3,all three,27636,0,236,0
+ml-dsa-65,r5fstack,-Os,keygen,16500,0,0,0
+ml-dsa-65,r5fstack,-Os,sign,23648,0,0,0
+ml-dsa-65,r5fstack,-Os,verify,16752,0,0,0
+ml-dsa-65,r5fstack,-Os,all three,26684,0,0,0
+ml-dsa-65,r5fstack,-O2,keygen,16752,0,0,0
+ml-dsa-65,r5fstack,-O2,sign,24920,0,0,0
+ml-dsa-65,r5fstack,-O2,verify,17512,0,0,0
+ml-dsa-65,r5fstack,-O2,all three,28456,0,0,0
+ml-dsa-65,r5fstack,-O3,keygen,17724,0,0,0
+ml-dsa-65,r5fstack,-O3,sign,25636,0,0,0
+ml-dsa-65,r5fstack,-O3,verify,18024,0,0,0
+ml-dsa-65,r5fstack,-O3,all three,29684,0,0,0
+ml-dsa-65,pqclean,-Os,keygen,7600,0,236,0
+ml-dsa-65,pqclean,-Os,sign,9012,0,236,0
+ml-dsa-65,pqclean,-Os,verify,7992,0,0,0
+ml-dsa-65,pqclean,-Os,all three,11048,0,236,0
+ml-dsa-65,pqclean,-O2,keygen,8796,0,236,0
+ml-dsa-65,pqclean,-O2,sign,10204,0,236,0
+ml-dsa-65,pqclean,-O2,verify,9216,0,0,0
+ml-dsa-65,pqclean,-O2,all three,12476,0,236,0
+ml-dsa-65,pqclean,-O3,keygen,9448,0,236,0
+ml-dsa-65,pqclean,-O3,sign,10904,0,236,0
+ml-dsa-65,pqclean,-O3,verify,9784,0,0,0
+ml-dsa-65,pqclean,-O3,all three,13616,0,236,0
+ml-dsa-87,r5f,-Os,keygen,17012,0,236,0
+ml-dsa-87,r5f,-Os,sign,23904,0,236,0
+ml-dsa-87,r5f,-Os,verify,16752,0,0,0
+ml-dsa-87,r5f,-Os,all three,26172,0,236,0
+ml-dsa-87,r5f,-O2,keygen,17264,0,236,0
+ml-dsa-87,r5f,-O2,sign,24408,0,236,0
+ml-dsa-87,r5f,-O2,verify,17256,0,0,0
+ml-dsa-87,r5f,-O2,all three,26920,0,236,0
+ml-dsa-87,r5f,-O3,keygen,17980,0,236,0
+ml-dsa-87,r5f,-O3,sign,25124,0,236,0
+ml-dsa-87,r5f,-O3,verify,17768,0,0,0
+ml-dsa-87,r5f,-O3,all three,27892,0,236,0
+ml-dsa-87,r5fstack,-Os,keygen,16500,0,0,0
+ml-dsa-87,r5fstack,-Os,sign,23904,0,0,0
+ml-dsa-87,r5fstack,-Os,verify,16752,0,0,0
+ml-dsa-87,r5fstack,-Os,all three,26940,0,0,0
+ml-dsa-87,r5fstack,-O2,keygen,17008,0,0,0
+ml-dsa-87,r5fstack,-O2,sign,24920,0,0,0
+ml-dsa-87,r5fstack,-O2,verify,17512,0,0,0
+ml-dsa-87,r5fstack,-O2,all three,28712,0,0,0
+ml-dsa-87,r5fstack,-O3,keygen,17724,0,0,0
+ml-dsa-87,r5fstack,-O3,sign,25892,0,0,0
+ml-dsa-87,r5fstack,-O3,verify,18024,0,0,0
+ml-dsa-87,r5fstack,-O3,all three,30196,0,0,0
+ml-dsa-87,pqclean,-Os,keygen,7728,0,236,0
+ml-dsa-87,pqclean,-Os,sign,9132,0,236,0
+ml-dsa-87,pqclean,-Os,verify,8008,0,0,0
+ml-dsa-87,pqclean,-Os,all three,11304,0,236,0
+ml-dsa-87,pqclean,-O2,keygen,8932,0,236,0
+ml-dsa-87,pqclean,-O2,sign,10332,0,236,0
+ml-dsa-87,pqclean,-O2,verify,9256,0,0,0
+ml-dsa-87,pqclean,-O2,all three,12732,0,236,0
+ml-dsa-87,pqclean,-O3,keygen,9656,0,236,0
+ml-dsa-87,pqclean,-O3,sign,11008,0,236,0
+ml-dsa-87,pqclean,-O3,verify,9832,0,0,0
+ml-dsa-87,pqclean,-O3,all three,13936,0,236,0

@@ -1,0 +1,15 @@
+# Sources and shell scripts stay LF even when checked out on Windows: the
+# verification scripts are run from WSL or Git Bash, where a CR would break the
+# shebang and the here-documents.
+* text=auto eol=lf
+
+# Windows-only tooling keeps CRLF: cmd.exe mis-parses labels and blocks in
+# batch files with bare LF endings.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Never touched.
+*.lib binary
+*.a   binary
+*.out binary
+*.bin binary

@@ -1,0 +1,767 @@
+<!-- SPDX-License-Identifier: Apache-2.0 - Copyright 2026 Liviu Silaghe -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+/* Base, so the page does not depend on a host supplying one: without a doctype
+   a browser renders in quirks mode, and without the viewport meta above the
+   responsive rules never engage on a phone. */
+:root {
+  color-scheme: light;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+body { margin: 0; font: 14px system-ui, -apple-system, "Segoe UI", sans-serif; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>ML-DSA on Cortex-R5F</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one scroll of measured figures - three stacked panels sharing a
+   single x-axis, then the ratios against the reference, the ROM panel and the
+   table view. Nothing is behind a control: the whole result is visible at rest. */
+:root {
+  color-scheme: light;
+  --page:        #f7f7f4;
+  --surface:     #fcfcfb;
+  --ink:         #0b0b0b;
+  --ink-2:       #52514e;
+  --muted:       #898781;
+  --grid:        #e1e0d9;
+  --axis:        #c3c2b7;
+  --hairline:    rgba(11, 11, 11, 0.10);
+  --lvl-2:       #86b6ef;
+  --lvl-3:       #2a78d6;
+  --lvl-5:       #104281;
+  --on-2:        #0b0b0b;
+  --on-3:        #ffffff;
+  --on-5:        #ffffff;
+  --bar:         #52514e;
+  --chip:        rgba(11, 11, 11, 0.045);
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page:      #0d0d0d;
+    --surface:   #1a1a19;
+    --ink:       #f0efec;
+    --ink-2:     #c3c2b7;
+    --muted:     #898781;
+    --grid:      #2c2c2a;
+    --axis:      #383835;
+    --hairline:  rgba(255, 255, 255, 0.10);
+    --lvl-2:     #1c5cab;
+    --lvl-3:     #3987e5;
+    --lvl-5:     #9ec5f4;
+    --on-2:      #ffffff;
+    --on-3:      #ffffff;
+    --on-5:      #0b0b0b;
+    --bar:       #c3c2b7;
+    --chip:      rgba(255, 255, 255, 0.06);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page:      #0d0d0d;
+  --surface:   #1a1a19;
+  --ink:       #f0efec;
+  --ink-2:     #c3c2b7;
+  --muted:     #898781;
+  --grid:      #2c2c2a;
+  --axis:      #383835;
+  --hairline:  rgba(255, 255, 255, 0.10);
+  --lvl-2:     #1c5cab;
+  --lvl-3:     #3987e5;
+  --lvl-5:     #9ec5f4;
+  --on-2:      #ffffff;
+  --on-3:      #ffffff;
+  --on-5:      #0b0b0b;
+  --bar:       #c3c2b7;
+  --chip:      rgba(255, 255, 255, 0.06);
+}
+
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 940px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+header { display: flex; flex-direction: column; gap: 8px; }
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+h1 {
+  margin: 0;
+  font-size: clamp(1.45rem, 1.1rem + 1.6vw, 2.05rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.standfirst { margin: 0; max-width: 66ch; color: var(--ink-2); font-size: 0.95rem; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 16px 16px 12px;
+  position: relative;
+}
+.card h2 { margin: 0 0 2px; font-size: 0.95rem; font-weight: 600; letter-spacing: -0.005em; }
+.card .sub { margin: 0 0 10px; font-size: 12.5px; color: var(--muted); max-width: 76ch; }
+
+.scroller { overflow-x: auto; }
+.scroller svg { display: block; width: 100%; height: auto; }
+#plot { min-width: 680px; }
+#rom { min-width: 520px; }
+
+.gridline { stroke: var(--grid); stroke-width: 1; }
+.axisline { stroke: var(--axis); stroke-width: 1; }
+.tick { fill: var(--muted); font-family: var(--mono); font-size: 10.5px; }
+.tick-2 { fill: var(--muted); font-family: var(--mono); font-size: 9.5px; opacity: 0.8; }
+.axis-title { fill: var(--ink-2); font-family: var(--sans); font-size: 11.5px; font-weight: 500; }
+.panel-name { fill: var(--ink); font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.panel-note { fill: var(--muted); font-family: var(--sans); font-size: 11px; }
+.digit { font-family: var(--mono); font-size: 10.5px; font-weight: 600; text-anchor: middle; }
+.row-label { fill: var(--ink-2); font-family: var(--mono); font-size: 11px; }
+.row-op { fill: var(--ink); font-family: var(--mono); font-size: 11.5px; font-weight: 600; }
+.bar-value { fill: var(--ink); font-family: var(--mono); font-size: 11px; }
+.hit { fill: transparent; cursor: pointer; }
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 8px 22px;
+  padding: 12px 2px 2px;
+  border-top: 1px solid var(--hairline);
+  margin-top: 8px;
+  font-size: 12.5px; color: var(--ink-2);
+}
+.legend .group { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.legend .item { display: inline-flex; align-items: center; gap: 6px; }
+.legend .key {
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+
+.tip {
+  position: absolute; z-index: 5; min-width: 176px;
+  padding: 9px 11px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  font-size: 12px; pointer-events: none; opacity: 0;
+  transition: opacity 120ms linear;
+}
+.tip[data-on="1"] { opacity: 1; }
+.tip .t-name { font-weight: 600; display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.tip dl { margin: 0; display: grid; grid-template-columns: auto auto; gap: 2px 12px; }
+.tip dt { color: var(--muted); }
+.tip dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+caption { text-align: left; color: var(--muted); font-size: 12.5px; padding-bottom: 8px; }
+th, td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--hairline); }
+thead th {
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;
+}
+tbody td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr.group-start td { border-top: 1px solid var(--axis); }
+
+#gain { min-width: 520px; }
+#gain th:first-child, #gain td:first-child { text-align: left; }
+#gain thead th { text-align: center; }
+#gain td { text-align: center; }
+#gain .op { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); }
+#gain .big { font-family: var(--mono); font-weight: 600; color: var(--ink); }
+#gain .small { font-family: var(--mono); color: var(--ink-2); }
+#gain .hdr { display: inline-flex; align-items: center; gap: 7px; }
+
+#data { min-width: 700px; }
+#data td:first-child, #data td:nth-child(2), #data td:nth-child(3),
+#data th:first-child, #data th:nth-child(2), #data th:nth-child(3) { text-align: left; }
+
+.disc {
+  width: 19px; height: 19px; flex: none;
+  display: inline-grid; place-items: center;
+  font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+  vertical-align: -4px; border-radius: 50%;
+}
+.swatch { display: inline-block; width: 11px; height: 11px; border-radius: 50%; vertical-align: -1px; margin-right: 7px; }
+.swatch.ring { background: transparent !important; box-shadow: inset 0 0 0 2px currentColor; }
+.swatch.sq { border-radius: 2px; background: transparent !important; box-shadow: inset 0 0 0 2px currentColor; }
+
+.notes { display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.notes h2 { margin: 0; font-size: 0.95rem; color: var(--ink); }
+.notes p { margin: 0; max-width: 78ch; }
+.notes b { color: var(--ink); font-weight: 600; }
+.notes code { font-family: var(--mono); font-size: 0.92em; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">pqr5f &middot; AM243x LaunchPad &middot; R5FSS0 core 0 @ 800 MHz &middot; arm-none-eabi-gcc -O3</div>
+    <h1>What the assembly buys, and what it costs</h1>
+    <p class="standfirst">Nine builds of ML-DSA on an Arm Cortex-R5F: three parameter sets, each as
+      PQClean's clean C reference and as the two ported assembly variants, speed-optimised and
+      low-stack. All three operations are shown at once, on one shared pair of axes.</p>
+  </header>
+
+  <section class="card">
+    <h2>Time against peak stack, per operation</h2>
+    <p class="sub">Both axes logarithmic and shared by all three panels. Each path starts at the C
+      reference and steps through the two ported variants, so the two arrows per parameter set are
+      what the assembly buys and what the low-stack variant then trades away.</p>
+    <div class="scroller">
+      <svg id="plot" viewBox="0 0 760 1142" role="img"
+           aria-label="Three panels plotting cycle count against peak stack use for nine ML-DSA builds, one panel per operation">
+        <g id="p-grid"></g>
+        <g id="p-conn"></g>
+        <g id="p-marks"></g>
+        <g id="p-axes"></g>
+      </svg>
+    </div>
+    <div class="tip" id="tip" role="status" aria-live="polite"></div>
+    <div class="legend">
+      <div class="group">
+        <span class="key">Security category</span>
+        <span class="item"><span class="disc" style="background:var(--lvl-2);color:var(--on-2)">2</span>ML-DSA-44</span>
+        <span class="item"><span class="disc" style="background:var(--lvl-3);color:var(--on-3)">3</span>ML-DSA-65</span>
+        <span class="item"><span class="disc" style="background:var(--lvl-5);color:var(--on-5)">5</span>ML-DSA-87</span>
+      </div>
+      <div class="group">
+        <span class="key">Implementation</span>
+        <span class="item"><span class="swatch sq" style="color:var(--lvl-3)"></span>pqclean, C reference</span>
+        <span class="item"><span class="swatch" style="background:var(--lvl-3)"></span>r5f, speed</span>
+        <span class="item"><span class="swatch ring" style="color:var(--lvl-3)"></span>r5fstack, low stack</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Both ported variants, measured against the C reference</h2>
+    <p class="sub">How many times less the ported build needs than PQClean's clean C on the same
+      core and the same build flags. Above 1.00 is better; 1.00 is no difference.</p>
+    <div class="scroller">
+      <table id="gain">
+        <thead><tr id="gain-head"></tr></thead>
+        <tbody id="gain-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>ROM, the price of all of it</h2>
+    <p class="sub" id="rom-sub"></p>
+    <div class="scroller">
+      <svg id="rom" viewBox="0 0 760 356" role="img"
+           aria-label="Bar chart of ROM footprint for three implementations across four link closures">
+        <g id="r-grid"></g>
+        <g id="r-bars"></g>
+        <g id="r-axes"></g>
+      </svg>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="scroller">
+      <table id="data">
+        <caption>Table view &mdash; every value in the panels above, plus ROM per build.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Operation</th>
+            <th scope="col">Scheme</th>
+            <th scope="col">Implementation</th>
+            <th scope="col">Security category</th>
+            <th scope="col">Cycles</th>
+            <th scope="col">@ 800 MHz</th>
+            <th scope="col">Peak stack</th>
+            <th scope="col">ROM</th>
+          </tr>
+        </thead>
+        <tbody id="data-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Reading the figure</h2>
+    <p id="note-gain"></p>
+    <p><b>The stack advantage is not where you would guess.</b> For key generation the reference and
+      the speed-optimised port need the same stack to within 236 bytes; the port only runs faster.
+      The gap opens at verification, where the port needs a quarter of the reference's stack, and
+      the low-stack variant a thirty-second of it.</p>
+    <p><b>ROM is what pays for it.</b> Roughly twice the reference, consistently: 1.86&times; for a
+      key-generation image, 2.28&times; for a signing one, and 2.01&times; for one carrying all three.
+      Those ratios barely move across the parameter sets, which is what an unrolled loop and a
+      twiddle table cost against C that computes them.</p>
+    <p><b>Two near-collisions in the panels are real.</b> ML-DSA-44's reference sits almost on top of
+      ML-DSA-65's speed-optimised port, and ML-DSA-65's reference on ML-DSA-87's. Porting a larger
+      parameter set costs about what the C reference of the next one down costs.</p>
+    <p><b>Not for production.</b> These are benchmark figures. No side-channel claim is made
+      beyond one measurement of the core's multiplier, signing time depends on secret values
+      through its rejection-sampling loop, nothing here is masked or hardened against fault
+      injection, and passing NIST's vectors is a self-check rather than a validation.</p>
+    <p><b>Sources.</b> Cycles and stack from <code>measurements.csv</code>, ROM from
+      <code>codesize.csv</code>. Stack is measured by painting it and scanning afterwards; no
+      implementation here defines any <code>.data</code> or <code>.bss</code>, so that figure is the
+      whole RAM budget in all nine cases. The reference is built for the same core with the same
+      flags and gets its whole implementation in ATCM, which is the more favourable placement of the
+      two &mdash; the ported variants keep only their assembly and Keccak there.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var OPS = ["keygen", "sign", "verify"];
+  var IMPLS = ["pqclean", "r5f", "r5fstack"];
+  var CLOCK = 800e6;
+
+  /* cycles, peak stack (bytes), ROM at -O3 for that entry point (bytes) */
+  var DATA = [
+    { scheme: "44", level: 2, impl: "pqclean",
+      keygen: [2335734, 38668, 9688], sign: [3452585, 52308, 11200], verify: [2400246, 36532, 9960] },
+    { scheme: "44", level: 2, impl: "r5f",
+      keygen: [1355172, 38432, 17980], sign: [1829838, 44928, 25380], verify: [1368536, 9008, 17768] },
+    { scheme: "44", level: 2, impl: "r5fstack",
+      keygen: [1753965, 4544, 17724], sign: [3752559, 5208, 26148], verify: [2844496, 2840, 18280] },
+    { scheme: "65", level: 3, impl: "pqclean",
+      keygen: [4102458, 61204, 9448], sign: [7035492, 79956, 10904], verify: [4062894, 58068, 9784] },
+    { scheme: "65", level: 3, impl: "r5f",
+      keygen: [2395701, 60968, 17724], sign: [3801584, 68992, 24868], verify: [2281534, 9984, 17768] },
+    { scheme: "65", level: 3, impl: "r5fstack",
+      keygen: [3365805, 4544, 17724], sign: [9495853, 6752, 25636], verify: [4975033, 2840, 18024] },
+    { scheme: "87", level: 5, impl: "pqclean",
+      keygen: [6889514, 98068, 9656], sign: [25638247, 122964, 11008], verify: [6985684, 93172, 9832] },
+    { scheme: "87", level: 5, impl: "r5f",
+      keygen: [4019253, 97832, 17980], sign: [14421635, 107904, 25124], verify: [3894541, 12048, 17768] },
+    { scheme: "87", level: 5, impl: "r5fstack",
+      keygen: [5474081, 4544, 17724], sign: [54589512, 8280, 25892], verify: [8636218, 2840, 18024] }
+  ];
+
+  /* ROM for an image linking all three entry points, -O3, --gc-sections */
+  var ROM_ALL = {
+    "44|pqclean": 14096, "44|r5f": 28148, "44|r5fstack": 30452,
+    "65|pqclean": 13616, "65|r5f": 27636, "65|r5fstack": 29684,
+    "87|pqclean": 13936, "87|r5f": 27892, "87|r5fstack": 30196
+  };
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function el(name, attrs, text) {
+    var n = document.createElementNS(SVGNS, name), k;
+    for (k in attrs) { if (attrs[k] !== null && attrs[k] !== undefined) { n.setAttribute(k, attrs[k]); } }
+    if (text !== undefined && text !== null) { n.textContent = text; }
+    return n;
+  }
+  function clear(n) { while (n.firstChild) { n.removeChild(n.firstChild); } }
+  function fmt(v) { return v.toLocaleString("en-US"); }
+  function ms(c) { var v = (c / CLOCK) * 1000; return (v < 10 ? v.toFixed(2) : v.toFixed(1)) + " ms"; }
+  function lvlVar(l) { return "var(--lvl-" + l + ")"; }
+  function onVar(l) { return "var(--on-" + l + ")"; }
+  function pick(s, impl) {
+    return DATA.filter(function (d) { return d.scheme === s && d.impl === impl; })[0];
+  }
+
+  /* ---- shared scales ---------------------------------------------------- */
+  var PX0 = 66, PX1 = 736, PH = 300, R = 10;
+  /* Each panel carries its header above the frame, so the tops leave room for
+     one line of text and the gap between panels is that line plus air. */
+  /* Pitch 369: 12 for the header, 300 of panel, 31 for the two tick rows that
+     now sit under every panel, then 26 of air before the next header. */
+  var TOPS = { keygen: 38, sign: 407, verify: 776 };
+  var PBOT = TOPS.verify + PH;
+  var XD = [Math.log10(1.2e6), Math.log10(6.5e7)];
+  var YD = [Math.log10(2000), Math.log10(1.8e5)];
+  function sx(v) { return PX0 + (Math.log10(v) - XD[0]) / (XD[1] - XD[0]) * (PX1 - PX0); }
+  function sy(v, op) { return TOPS[op] + PH - (Math.log10(v) - YD[0]) / (YD[1] - YD[0]) * PH; }
+
+  var XT = [
+    { v: 2e6, lab: "2M", t: "2.5 ms" }, { v: 5e6, lab: "5M", t: "6.3 ms" },
+    { v: 1e7, lab: "10M", t: "12.5 ms" }, { v: 2e7, lab: "20M", t: "25 ms" },
+    { v: 5e7, lab: "50M", t: "62.5 ms" }
+  ];
+  var YT = [3000, 10000, 30000, 100000];
+  var PANEL_NOTE = {
+    keygen: "the reference and the speed-optimised port need the same stack; only the time differs",
+    sign: "the widest spread on both axes",
+    verify: "where the port's stack advantage is largest"
+  };
+
+  function drawChrome() {
+    var g = document.getElementById("p-grid"), a = document.getElementById("p-axes");
+    clear(g); clear(a);
+
+    OPS.forEach(function (op) {
+      var top = TOPS[op], bot = top + PH;
+
+      XT.forEach(function (t) {
+        var x = sx(t.v);
+        /* Gridlines per panel, and the x axis repeated under each one rather
+           than once at the bottom: a view that shows only keygen, or only
+           keygen and sign, would otherwise have no axis in it at all. */
+        g.appendChild(el("line", { x1: x, y1: top, x2: x, y2: bot, "class": "gridline" }));
+        a.appendChild(el("text", { x: x, y: bot + 18, "class": "tick", "text-anchor": "middle" }, t.lab));
+        a.appendChild(el("text", { x: x, y: bot + 31, "class": "tick-2", "text-anchor": "middle" }, t.t));
+      });
+
+      YT.forEach(function (v) {
+        var y = sy(v, op);
+        g.appendChild(el("line", { x1: PX0, y1: y, x2: PX1, y2: y, "class": "gridline" }));
+        a.appendChild(el("text", { x: PX0 - 9, y: y + 3.5, "class": "tick", "text-anchor": "end" }, fmt(v)));
+      });
+      a.appendChild(el("line", { x1: PX0, y1: bot, x2: PX1, y2: bot, "class": "axisline" }));
+      a.appendChild(el("line", { x1: PX0, y1: top, x2: PX0, y2: bot, "class": "axisline" }));
+      /* Header above the frame rather than inside it: in the plot the note ran
+         across the very marks it describes. */
+      a.appendChild(el("text", { x: PX0, y: top - 12, "class": "panel-name" }, op));
+      a.appendChild(el("text", { x: PX1, y: top - 12, "class": "panel-note", "text-anchor": "end" },
+        PANEL_NOTE[op]));
+    });
+
+    a.appendChild(el("text", { x: PX1, y: PBOT + 52, "class": "axis-title", "text-anchor": "end" },
+      "cycles, logarithmic — the second row is the same axis in milliseconds at 800 MHz"));
+    a.appendChild(el("text", {
+      "class": "axis-title", "text-anchor": "middle",
+      transform: "translate(16," + ((TOPS.keygen + PBOT) / 2) + ") rotate(-90)"
+    }, "peak stack, bytes, logarithmic"));
+  }
+
+  /* A mark is drawn at radius 10 and the line is 2 wide, so 14 leaves a
+     visible gap on either side of it. */
+  var CLEAR = 14;
+
+  /* A cubic, not a quadratic: one obstacle here sits barely 30 px from the
+     start of its hop, and a quadratic hardly moves that near its ends, so no
+     amount of bending cleared it. A cubic with both control points offset
+     leaves the start already deflected. */
+  function bezier(p, t) {
+    var mt = 1 - t;
+    return [mt * mt * mt * p[0] + 3 * mt * mt * t * p[2] + 3 * mt * t * t * p[4] + t * t * t * p[6],
+            mt * mt * mt * p[1] + 3 * mt * mt * t * p[3] + 3 * mt * t * t * p[5] + t * t * t * p[7]];
+  }
+
+  function clears(p, hits) {
+    var i, q, j;
+    for (i = 0; i <= 28; i++) {
+      q = bezier(p, i / 28);
+      for (j = 0; j < hits.length; j++) {
+        if (Math.hypot(q[0] - hits[j].x, q[1] - hits[j].y) < CLEAR) { return false; }
+      }
+    }
+    return true;
+  }
+
+  function curve(ax, ay, bx, by, nx, ny, k) {
+    return [ax, ay,
+            ax + (bx - ax) / 3 + nx * k, ay + (by - ay) / 3 + ny * k,
+            ax + (bx - ax) * 2 / 3 + nx * k, ay + (by - ay) * 2 / 3 + ny * k,
+            bx, by];
+  }
+
+  function hop(conn, colour, x1, y1, x2, y2, obstacles) {
+    var dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    var ux = dx / len, uy = dy / len;
+    var ax = x1 + ux * (R + 4), ay = y1 + uy * (R + 4);
+    var bx = x2 - ux * (R + 8), by = y2 - uy * (R + 8);
+    if ((bx - ax) * ux + (by - ay) * uy <= 0) { return; }   /* too close to draw */
+
+    /* A straight hop sometimes runs through a mark that belongs to another
+       parameter set - ML-DSA-87's does, over ML-DSA-65's reference. Where that
+       happens the hop is bent to the far side instead, by as much as it takes
+       for every sampled point on the curve to clear the mark. */
+    var nx = -uy, ny = ux, seg = Math.hypot(bx - ax, by - ay), k = 0;
+    var hits = obstacles.filter(function (o) {
+      var t = ((o.x - ax) * ux + (o.y - ay) * uy) / seg;
+      return t > -0.05 && t < 1.05 &&
+             Math.abs((o.x - ax) * nx + (o.y - ay) * ny) < CLEAR;
+    });
+    var p = null;
+    if (hits.length) {
+      var away = hits.reduce(function (s, o) {
+        return s + ((o.x - ax) * nx + (o.y - ay) * ny);
+      }, 0) > 0 ? -1 : 1;
+      for (var m = 8; m <= 96; m += 4) {
+        k = away * m;
+        p = curve(ax, ay, bx, by, nx, ny, k);
+        if (clears(p, hits)) { break; }
+      }
+    }
+
+    var d = p ? "M" + ax + " " + ay + " C" + p[2].toFixed(1) + " " + p[3].toFixed(1) +
+                " " + p[4].toFixed(1) + " " + p[5].toFixed(1) + " " + bx + " " + by
+              : "M" + ax + " " + ay + " L" + bx + " " + by;
+    conn.appendChild(el("path", { d: d, fill: "none", stroke: "var(--surface)",
+      "stroke-width": 5, "stroke-linecap": "round" }));
+    conn.appendChild(el("path", { d: d, fill: "none", stroke: colour,
+      "stroke-width": 2, "stroke-linecap": "round", opacity: 0.5 }));
+
+    /* The arrowhead follows the curve's final tangent, which runs from the last
+       control point to the end - the same as the chord for a straight hop. */
+    var tx = bx - (p ? p[4] : ax), ty = by - (p ? p[5] : ay), tl = Math.hypot(tx, ty) || 1;
+    tx /= tl; ty /= tl;
+    var px = -ty, py = tx;
+    conn.appendChild(el("polygon", {
+      points: [bx + tx * 6, by + ty * 6, bx + px * 3.6, by + py * 3.6, bx - px * 3.6, by - py * 3.6]
+        .map(function (n) { return Math.round(n * 100) / 100; }).join(","),
+      fill: colour, opacity: 0.7
+    }));
+  }
+
+  function drawMarks() {
+    var conn = document.getElementById("p-conn"), marks = document.getElementById("p-marks");
+    clear(conn); clear(marks);
+
+    OPS.forEach(function (op) {
+      var pos = {};
+      DATA.forEach(function (d) {
+        pos[d.scheme + d.impl] = { x: sx(d[op][0]), y: sy(d[op][1], op) };
+      });
+      function others(ka, kb) {
+        return DATA.filter(function (d) {
+          var k = d.scheme + d.impl;
+          return k !== ka && k !== kb;
+        }).map(function (d) { return pos[d.scheme + d.impl]; });
+      }
+      ["44", "65", "87"].forEach(function (s) {
+        var col = lvlVar(pick(s, "pqclean").level);
+        var kc = s + "pqclean", kf = s + "r5f", ks = s + "r5fstack";
+        hop(conn, col, pos[kc].x, pos[kc].y, pos[kf].x, pos[kf].y, others(kc, kf));
+        hop(conn, col, pos[kf].x, pos[kf].y, pos[ks].x, pos[ks].y, others(kf, ks));
+      });
+
+      DATA.forEach(function (d) {
+        var x = sx(d[op][0]), y = sy(d[op][1], op);
+        var g = el("g", { transform: "translate(" + x.toFixed(2) + "," + y.toFixed(2) + ")" });
+        /* A surface halo under every mark, so the few that nearly touch, and
+           the connectors passing behind them, still read as separate. */
+        g.appendChild(el("circle", { cx: 0, cy: 0, r: R + 2.5, fill: "var(--surface)" }));
+        if (d.impl === "r5f") {
+          g.appendChild(el("circle", { cx: 0, cy: 0, r: R, fill: lvlVar(d.level) }));
+          g.appendChild(el("text", { x: 0, y: 0, "class": "digit", fill: onVar(d.level),
+            "dominant-baseline": "central" }, String(d.level)));
+        } else if (d.impl === "r5fstack") {
+          g.appendChild(el("circle", { cx: 0, cy: 0, r: R - 1.1, fill: "var(--surface)",
+            stroke: lvlVar(d.level), "stroke-width": 2.2 }));
+          g.appendChild(el("text", { x: 0, y: 0, "class": "digit", fill: "var(--ink)",
+            "dominant-baseline": "central" }, String(d.level)));
+        } else {
+          var a = (R - 1.2) * 1.72;
+          g.appendChild(el("rect", { x: -a / 2, y: -a / 2, width: a, height: a, rx: 2.5,
+            fill: "var(--surface)", stroke: lvlVar(d.level), "stroke-width": 2.2 }));
+          g.appendChild(el("text", { x: 0, y: 0, "class": "digit", fill: "var(--ink)",
+            "dominant-baseline": "central" }, String(d.level)));
+        }
+        var hit = el("circle", { cx: 0, cy: 0, r: 19, "class": "hit", tabindex: "0", role: "img" });
+        hit.setAttribute("aria-label", op + ", ML-DSA-" + d.scheme + " " + d.impl + ": " +
+          fmt(d[op][0]) + " cycles, " + fmt(d[op][1]) + " bytes of peak stack, " +
+          fmt(d[op][2]) + " bytes of ROM, security category " + d.level);
+        ["mouseenter", "focus"].forEach(function (ev) {
+          hit.addEventListener(ev, function () { showTip(d, op, x, y); });
+        });
+        ["mouseleave", "blur"].forEach(function (ev) { hit.addEventListener(ev, hideTip); });
+        g.appendChild(hit);
+        marks.appendChild(g);
+      });
+    });
+  }
+
+  /* ---- tooltip ---------------------------------------------------------- */
+  var tip = document.getElementById("tip");
+  function swatchFor(d) {
+    var cls = d.impl === "r5f" ? "swatch" : d.impl === "r5fstack" ? "swatch ring" : "swatch sq";
+    return '<span class="' + cls + '" style="background:' + lvlVar(d.level) +
+           ";color:" + lvlVar(d.level) + '"></span>';
+  }
+  function showTip(d, op, x, y) {
+    var svg = document.getElementById("plot");
+    var scale = svg.getBoundingClientRect().width / 760;
+    var ref = pick(d.scheme, "pqclean");
+    tip.innerHTML =
+      '<div class="t-name">' + swatchFor(d) + "ML-DSA-" + d.scheme + " · " + d.impl + "</div>" +
+      "<dl>" +
+        "<dt>" + op + "</dt><dd>" + fmt(d[op][0]) + " cyc</dd>" +
+        "<dt>at 800 MHz</dt><dd>" + ms(d[op][0]) + "</dd>" +
+        "<dt>peak stack</dt><dd>" + fmt(d[op][1]) + " B</dd>" +
+        "<dt>ROM</dt><dd>" + fmt(d[op][2]) + " B</dd>" +
+        (d.impl === "pqclean" ? "" :
+          "<dt>vs reference</dt><dd>×" + (ref[op][0] / d[op][0]).toFixed(2) + " time, ×" +
+          (ref[op][1] / d[op][1]).toFixed(2) + " stack</dd>") +
+        "<dt>security category</dt><dd>" + d.level + "</dd>" +
+      "</dl>";
+    tip.setAttribute("data-on", "1");
+    var card = tip.parentElement.getBoundingClientRect();
+    var wrapEl = svg.parentElement.getBoundingClientRect();
+    var left = (wrapEl.left - card.left) + x * scale - svg.parentElement.scrollLeft + 24;
+    var top = (wrapEl.top - card.top) + y * scale - 16;
+    var w = tip.offsetWidth || 190;
+    if (left + w > card.width - 8) { left = left - w - 48; }
+    tip.style.left = Math.max(8, left) + "px";
+    tip.style.top = Math.max(4, top) + "px";
+  }
+  function hideTip() { tip.setAttribute("data-on", "0"); }
+
+  /* ---- ratios against the reference ------------------------------------- */
+  function drawGain() {
+    var head = document.getElementById("gain-head"), body = document.getElementById("gain-body");
+    clear(head); clear(body);
+    head.insertAdjacentHTML("beforeend", '<th scope="col">Operation &middot; variant</th>');
+    ["44", "65", "87"].forEach(function (s) {
+      var lv = pick(s, "r5f").level;
+      head.insertAdjacentHTML("beforeend",
+        '<th scope="col"><span class="hdr"><span class="disc" style="background:' + lvlVar(lv) +
+        ";color:" + onVar(lv) + '">' + lv + "</span>ML-DSA-" + s + "</span></th>");
+    });
+    OPS.forEach(function (op, oi) {
+      ["r5f", "r5fstack"].forEach(function (impl, ii) {
+        var tr = document.createElement("tr");
+        if (oi > 0 && ii === 0) { tr.className = "group-start"; }
+        tr.insertAdjacentHTML("beforeend",
+          '<td class="op">' + op + " · " + impl + "</td>");
+        ["44", "65", "87"].forEach(function (s) {
+          var c = pick(s, "pqclean"), d = pick(s, impl);
+          tr.insertAdjacentHTML("beforeend",
+            '<td><span class="big">×' + (c[op][0] / d[op][0]).toFixed(2) + "</span> time<br>" +
+            '<span class="small">×' + (c[op][1] / d[op][1]).toFixed(2) + "</span> stack</td>");
+        });
+        body.appendChild(tr);
+      });
+    });
+  }
+
+  /* ---- ROM panel -------------------------------------------------------- */
+  function romRange(op, impl) {
+    var v = ["44", "65", "87"].map(function (s) {
+      return op === "all three" ? ROM_ALL[s + "|" + impl] : pick(s, impl)[op][2];
+    });
+    return { lo: Math.min.apply(null, v), hi: Math.max.apply(null, v) };
+  }
+
+  function drawRom() {
+    var grid = document.getElementById("r-grid"), bars = document.getElementById("r-bars"),
+        axes = document.getElementById("r-axes");
+    clear(grid); clear(bars); clear(axes);
+
+    var groups = OPS.concat(["all three"]);
+    var x0 = 196, x1 = 596, y0 = 12, y1 = 310, top = 32000;
+    function bx(v) { return x0 + v / top * (x1 - x0); }
+
+    for (var v = 0; v <= top; v += 8000) {
+      var x = bx(v);
+      grid.appendChild(el("line", { x1: x, y1: y0, x2: x, y2: y1, "class": "gridline" }));
+      axes.appendChild(el("text", { x: x, y: y1 + 17, "class": "tick", "text-anchor": "middle" },
+        v === 0 ? "0" : (v / 1000) + "k"));
+    }
+    axes.appendChild(el("line", { x1: x0, y1: y0, x2: x0, y2: y1, "class": "axisline" }));
+    axes.appendChild(el("line", { x1: x0, y1: y1, x2: x1, y2: y1, "class": "axisline" }));
+    axes.appendChild(el("text", { x: x1, y: y1 + 34, "class": "axis-title", "text-anchor": "end" },
+      "ROM, bytes — zero-based; the bar is the range across the three parameter sets"));
+
+    var band = (y1 - y0) / groups.length;
+    groups.forEach(function (op, gi) {
+      var gTop = y0 + band * gi;
+      if (gi > 0) {
+        grid.appendChild(el("line", { x1: x0, y1: gTop, x2: x1, y2: gTop,
+          stroke: "var(--hairline)", "stroke-width": 1 }));
+      }
+      axes.appendChild(el("text", { x: 10, y: gTop + 20, "class": "row-op" }, op));
+      IMPLS.forEach(function (impl, i) {
+        var r = romRange(op, impl);
+        var cy = gTop + 20 + i * 22, bh = 15, y = cy - bh / 2;
+        axes.appendChild(el("text", { x: x0 - 10, y: cy + 4, "class": "row-label",
+          "text-anchor": "end" }, impl));
+        bars.appendChild(el("rect", { x: x0, y: y, width: Math.max(2, bx(r.lo) - x0), height: bh,
+          rx: 3, fill: "var(--bar)", opacity: impl === "pqclean" ? 0.45 : 1 }));
+        if (r.hi > r.lo) {
+          bars.appendChild(el("rect", { x: bx(r.lo), y: y, width: bx(r.hi) - bx(r.lo), height: bh,
+            fill: "var(--bar)", opacity: impl === "pqclean" ? 0.22 : 0.45 }));
+        }
+        bars.appendChild(el("text", { x: bx(r.hi) + 10, y: cy + 4, "class": "bar-value" },
+          r.hi > r.lo ? fmt(r.lo) + " – " + fmt(r.hi) : fmt(r.lo)));
+      });
+    });
+
+    var a = romRange("all three", "pqclean"), b = romRange("all three", "r5f");
+    document.getElementById("rom-sub").innerHTML =
+      "Each bar is a real link of one closure with <code style=\"font-family:var(--mono)\">--gc-sections</code>" +
+      " — what an image doing only that would carry. The reference is the pale bar in each group. " +
+      "An image with all three operations is " + fmt(a.lo) + "–" + fmt(a.hi) +
+      " bytes of C against " + fmt(b.lo) + "–" + fmt(b.hi) + " bytes of ported assembly.";
+  }
+
+  /* ---- table ------------------------------------------------------------ */
+  function drawTable() {
+    var tb = document.getElementById("data-body");
+    clear(tb);
+    OPS.forEach(function (op, oi) {
+      DATA.forEach(function (d, di) {
+        var tr = document.createElement("tr");
+        if (oi > 0 && di === 0) { tr.className = "group-start"; }
+        tr.insertAdjacentHTML("beforeend", "<td>" + (di === 0 ? op : "") + "</td>");
+        tr.insertAdjacentHTML("beforeend", "<td>" + swatchFor(d) + "ML-DSA-" + d.scheme + "</td>");
+        tr.insertAdjacentHTML("beforeend", "<td>" + d.impl + "</td>");
+        tr.insertAdjacentHTML("beforeend", "<td>" + d.level + "</td>");
+        tr.insertAdjacentHTML("beforeend", "<td>" + fmt(d[op][0]) + "</td>");
+        tr.insertAdjacentHTML("beforeend", "<td>" + ms(d[op][0]) + "</td>");
+        tr.insertAdjacentHTML("beforeend", "<td>" + fmt(d[op][1]) + " B</td>");
+        tr.insertAdjacentHTML("beforeend", "<td>" + fmt(d[op][2]) + " B</td>");
+        tb.appendChild(tr);
+      });
+    });
+  }
+
+  /* ---- note ------------------------------------------------------------- */
+  function drawNote() {
+    function span(op, impl, idx) {
+      var v = ["44", "65", "87"].map(function (s) {
+        return pick(s, "pqclean")[op][idx] / pick(s, impl)[op][idx];
+      });
+      return { lo: Math.min.apply(null, v), hi: Math.max.apply(null, v) };
+    }
+    var t = OPS.map(function (op) {
+      var g = span(op, "r5f", 0);
+      return op + " ×" + g.lo.toFixed(2) + "–" + g.hi.toFixed(2);
+    });
+    document.getElementById("note-gain").innerHTML =
+      "<b>The assembly is worth about three quarters again in speed, and it is remarkably even.</b> " +
+      "Against the C reference on the same core: " + t.join(", ") + ". Three parameter sets, three " +
+      "operations, and every ratio lands in the same narrow band — the speed-up is a property " +
+      "of the instruction-level work, not of any one parameter set.";
+  }
+
+  drawChrome();
+  drawMarks();
+  drawGain();
+  drawRom();
+  drawTable();
+  drawNote();
+})();
+</script>
+</body>
+</html>

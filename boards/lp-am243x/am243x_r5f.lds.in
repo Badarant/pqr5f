@@ -1,0 +1,141 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Copyright 2026 Liviu Silaghe */
+/*
+ * pqr5f on AM243x R5FSS0 core 0, GNU ld.
+ *
+ * Inner loops in ATCM, everything else in MSRAM. TCM sizes are the measured
+ * ones - 32 KiB each, which is what a dual-core cluster gives each core, not
+ * the 64 KiB the SoC header reports.
+ *
+ * Preprocessed into the build directory, because which region holds the main
+ * stack is a per-variant decision and GNU ld has no conditional for it. With
+ * PQR5F_STACK_IN_BTCM the stack moves to BTCM, which only the stack-optimised
+ * variant fits into: its 16 KB goes in, the speed variant's 128 KB does not.
+ */
+ENTRY(_vectors)
+
+MEMORY
+{
+    ATCM  (rwx) : ORIGIN = 0x00000000, LENGTH = 32K
+    BTCM  (rwx) : ORIGIN = 0x41010000, LENGTH = 32K
+    /* Above the SBL's own MSRAM_1, which is 0x70070000..0x70090000 and which
+     * it keeps using after it has loaded us - see sbl_ospi's example.syscfg.
+     * Below APPIMAGE at 0x70180000. Loading at 0x70080000 puts the image
+     * inside the loader's scratch and it comes up with holes in it. */
+    MSRAM (rwx) : ORIGIN = 0x70090000, LENGTH = 0xF0000
+}
+
+__svc_stack_size   = 4K;
+__irq_stack_size   = 256;
+__fiq_stack_size   = 256;
+__abort_stack_size = 256;
+__undef_stack_size = 256;
+#ifdef PQR5F_STACK_IN_BTCM
+/* BTCM is otherwise empty, so there is no reason to cut this fine. pqm4
+ * measures 8.3 KB to sign ML-DSA-87 with the stack variant; the painting
+ * report says what it really is here. */
+__stack_size       = 24K;
+#else
+__stack_size       = 128K;   /* signing ML-DSA-87 needs about 108 KB */
+#endif
+
+SECTIONS
+{
+    .vectors : ALIGN(32) {
+        KEEP(*(.vectors))
+    } > ATCM
+
+    /* Keccak first and 256-byte aligned, as its source asks for. */
+    .text.pqr5fkeccak : ALIGN(256) {
+        *keccakf1600_asm.o(.text .text.*)
+        *keccakf1600.o(.text .text.* .rodata .rodata.*)
+    } > ATCM
+
+    .text.pqr5f : ALIGN(8) {
+        *ntt.o(.text .text.* .rodata .rodata.*)
+        *smallntt_769.o(.text .text.* .rodata .rodata.*)
+        *vector.o(.text .text.* .rodata .rodata.*)
+        *pointwise_mont.o(.text .text.* .rodata .rodata.*)
+        *fips202.o(.text .text.* .rodata .rodata.*)
+        *multest.o(.text .text.*)
+        *multest_main.o(.text .text.* .rodata .rodata.*)
+#ifdef PQR5F_PQCLEAN
+        /* The baseline's arithmetic is all C, in files the list above does not
+         * catch. Giving it the whole implementation in ATCM is deliberate: the
+         * ported variants keep their assembly and their Keccak here and leave
+         * their C layer in MSRAM, so this hands the baseline the more
+         * favourable placement of the two. If the port still wins, the win is
+         * not the memory map. About 18 KB in all, inside the 32 KB region.
+         *
+         * Guarded, because these basenames exist in the ported builds too,
+         * where moving them would change what the published numbers measure.
+         */
+        *poly.o(.text .text.* .rodata .rodata.*)
+        *polyvec.o(.text .text.* .rodata .rodata.*)
+        *packing.o(.text .text.* .rodata .rodata.*)
+        *rounding.o(.text .text.* .rodata .rodata.*)
+        *reduce.o(.text .text.* .rodata .rodata.*)
+        *sign.o(.text .text.* .rodata .rodata.*)
+        *symmetric-shake.o(.text .text.* .rodata .rodata.*)
+#endif
+    } > ATCM
+
+    .text : ALIGN(8) {
+        *(.text.startup)
+        *(.text .text.*)
+        *(.glue_7) *(.glue_7t)
+    } > MSRAM
+
+    .rodata : ALIGN(8) {
+        __rodata_start = .;
+        *(.rodata .rodata.*)
+    } > MSRAM
+
+    .ARM.exidx : ALIGN(4) {
+        __exidx_start = .;
+        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+        __exidx_end = .;
+    } > MSRAM
+
+    __data_load = LOADADDR(.data);
+    .data : ALIGN(8) {
+        __data_start = .;
+        *(.data .data.*)
+        . = ALIGN(4);
+        __data_end = .;
+    } > MSRAM
+
+    .bss (NOLOAD) : ALIGN(8) {
+        __bss_start = .;
+        *(.bss .bss.*)
+        *(COMMON)
+        . = ALIGN(4);
+        __bss_end = .;
+    } > MSRAM
+
+    .stacks (NOLOAD) : ALIGN(8) {
+        . += __fiq_stack_size;   __fiq_stack_top   = .;
+        . += __irq_stack_size;   __irq_stack_top   = .;
+        . += __abort_stack_size; __abort_stack_top = .;
+        . += __undef_stack_size; __undef_stack_top = .;
+        . += __svc_stack_size;   __svc_stack_top   = .;
+#ifndef PQR5F_STACK_IN_BTCM
+        . = ALIGN(8);
+        __stack_start = .;       /* the low end: the stack grows down to here */
+        . += __stack_size;       __stack_top       = .;
+#endif
+    } > MSRAM
+
+#ifdef PQR5F_STACK_IN_BTCM
+    /* The hot data of the whole computation: polynomials live here. Putting it
+     * in tightly coupled memory removes the cache from the measurement. */
+    .mainstack (NOLOAD) : ALIGN(8) {
+        __stack_start = .;
+        . += __stack_size;       __stack_top       = .;
+    } > BTCM
+#endif
+
+    __msram_end = .;
+
+    /DISCARD/ : { *(.ARM.attributes) *(.comment) *(.note.*) }
+}
